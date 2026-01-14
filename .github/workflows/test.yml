@@ -1,0 +1,100 @@
+name: Test Action
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test-minimal:
+    name: Test Minimal Setup
+    runs-on: ubuntu-latest
+    if: github.repository == 'rdbumstead/setup-salesforce-action'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Test Minimal
+        uses: ./
+        with:
+          jwt_key: ${{ secrets.SFDX_JWT_KEY }}
+          client_id: ${{ secrets.SFDX_CLIENT_ID }}
+          username: ${{ vars.SFDX_USERNAME }}
+
+      - name: Verify
+        run: |
+          sf --version
+          sf org display
+
+  test-with-plugins:
+    name: Test with Plugins
+    runs-on: ubuntu-latest
+    if: github.repository == 'rdbumstead/setup-salesforce-action'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Test with Plugins
+        uses: ./
+        with:
+          jwt_key: ${{ secrets.SFDX_JWT_KEY }}
+          client_id: ${{ secrets.SFDX_CLIENT_ID }}
+          username: ${{ vars.SFDX_USERNAME }}
+          install_scanner: "true"
+          install_delta: "true"
+
+      - name: Verify Plugins
+        run: |
+          sf plugins | grep sfdx-git-delta
+          sf plugins | grep code-analyzer
+
+  test-dev-tools:
+    name: Test Dev Tools
+    runs-on: ubuntu-latest
+    if: github.repository == 'rdbumstead/setup-salesforce-action'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Test Dev Tools
+        uses: ./
+        with:
+          jwt_key: ${{ secrets.SFDX_JWT_KEY }}
+          client_id: ${{ secrets.SFDX_CLIENT_ID }}
+          username: ${{ vars.SFDX_USERNAME }}
+          install_prettier: "true"
+          install_eslint: "true"
+          install_lwc_jest: "true"
+
+      - name: Verify Tools
+        run: |
+          prettier --version
+          eslint --version
+          npm list -g @salesforce/sfdx-lwc-jest
+
+  test-skip-auth:
+    name: Test Skip Auth
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Test Skip Auth
+        uses: ./
+        with:
+          jwt_key: "dummy"
+          client_id: "dummy"
+          username: "dummy"
+          skip_auth: "true"
+          install_delta: "true"
+
+      - name: Verify CLI Only
+        run: |
+          sf --version
+          sf plugins | grep sfdx-git-delta

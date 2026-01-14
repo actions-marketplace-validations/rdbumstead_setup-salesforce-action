@@ -1,0 +1,41 @@
+# ============================================================================
+# delta-deployment.yml
+# ============================================================================
+name: Delta Deployment
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Salesforce
+        uses: rdbumstead/setup-salesforce-action@v1
+        with:
+          jwt_key: ${{ secrets.SFDX_JWT_KEY }}
+          client_id: ${{ secrets.SFDX_CLIENT_ID }}
+          username: ${{ vars.SFDX_USERNAME }}
+          install_delta: "true"
+
+      - name: Generate Delta
+        run: |
+          mkdir changed-sources
+          sf sgd:source:delta \
+            --to HEAD \
+            --from HEAD^ \
+            --output changed-sources/ \
+            --generate-delta
+
+      - name: Deploy Delta
+        run: |
+          if [ -f "changed-sources/package/package.xml" ]; then
+            sf project deploy start \
+              --manifest changed-sources/package/package.xml \
+              --test-level RunLocalTests
+          fi

@@ -1,0 +1,37 @@
+# ============================================================================
+# quality-check.yml
+# ============================================================================
+name: Code Quality Pipeline
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Salesforce
+        uses: rdbumstead/setup-salesforce-action@v1
+        with:
+          jwt_key: ${{ secrets.SFDX_JWT_KEY }}
+          client_id: ${{ secrets.SFDX_CLIENT_ID }}
+          username: ${{ vars.SFDX_USERNAME }}
+          install_scanner: "true"
+          install_prettier: "true"
+          install_eslint: "true"
+
+      - name: Check Formatting
+        run: prettier --check "force-app/**/*.{cls,js,html,css}"
+
+      - name: Lint Code
+        run: eslint force-app/**/lwc/**/*.js
+
+      - name: Scan Security
+        run: |
+          sf scanner:run \
+            --target force-app \
+            --severity-threshold 2 \
+            --format table

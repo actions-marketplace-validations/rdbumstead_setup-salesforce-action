@@ -1,0 +1,29 @@
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Salesforce
+.sf/
+.sfdx/
+*.key
+jwt.key
+server.key
+server.crt
+server.csr
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Test
+test-results/
+coverage/
+*.log

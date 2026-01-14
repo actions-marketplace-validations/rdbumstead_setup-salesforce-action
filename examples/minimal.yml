@@ -1,0 +1,22 @@
+# ============================================================================
+# minimal.yml
+# ============================================================================
+name: Minimal Salesforce Setup
+
+on: [push]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Salesforce
+        uses: rdbumstead/setup-salesforce-action@v1
+        with:
+          jwt_key: ${{ secrets.SFDX_JWT_KEY }}
+          client_id: ${{ secrets.SFDX_CLIENT_ID }}
+          username: ${{ vars.SFDX_USERNAME }}
+
+      - name: Deploy
+        run: sf project deploy start --source-dir force-app
