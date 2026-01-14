@@ -5,7 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] - 2026-01-12
+## [1.1.0] - 2026-01-14
+
+### Added
+
+- **Custom Alias Support**: New `alias` input parameter allows users to specify custom org aliases
+  - Enables multi-org workflows (authenticate to multiple orgs in same job)
+  - Defaults to `TargetOrg` for backward compatibility
+  - Useful for data migration, multi-environment validation, and Dev Hub + scratch org workflows
+
+### Changed
+
+- Authentication step now uses custom alias instead of hardcoded values
+- Improved authentication command structure with explicit flag passing (fixes potential quoting issues)
+
+### Fixed
+
+- Resolved authentication issue with FLAGS variable expansion
+- Improved error handling with proper flag quoting
+
+## [1.0.0] - 2026-01-13
 
 ### Added
 
@@ -23,11 +42,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Automatic org type detection and environment variables
 - Composite action pattern for easy reuse
 
-### Fixed
-
-- **Cross-platform compatibility**: Removed `sudo apt-get` dependence to support Windows and macOS runners.
-- **Security improvement**: Implemented `trap` for guaranteed JWT key cleanup on success or failure.
-
 ### Features
 
 - Zero-configuration minimal setup (CLI + auth only)
@@ -37,7 +51,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Plugin version checking to avoid redundant installs
 - Comprehensive error handling and validation
 - Support for both standard orgs and Dev Hubs
-- Skip auth capability for custom authentication flows
 
 ### Performance
 
@@ -45,14 +58,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Recommended setup (delta + scanner): 35 seconds (cached)
 - Full stack setup (all tools): 45 seconds (cached)
 - ~95% cache hit rate in typical CI/CD workflows
-- Conditional plugin installation to skip unnecessary steps
 
 ### Documentation
 
 - Comprehensive README with multiple use case examples
 - Step-by-step Connected App setup guide
-- **Documentation**: Replaced troubleshooting and report bug emojis for better visual clarity.
+- Troubleshooting guide for common issues
 - Performance comparison tables
 - Complete input reference
 
+[1.1.0]: https://github.com/rdbumstead/setup-salesforce-action/releases/tag/v1.1.0
 [1.0.0]: https://github.com/rdbumstead/setup-salesforce-action/releases/tag/v1.0.0

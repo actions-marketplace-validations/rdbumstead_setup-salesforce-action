@@ -1,0 +1,49 @@
+# ============================================================================
+# multi-org.yml
+# ============================================================================
+name: Multi-Org Deployment
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-multi-org:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Development Org
+        uses: rdbumstead/setup-salesforce-action@v1
+        with:
+          jwt_key: ${{ secrets.SFDX_JWT_KEY }}
+          client_id: ${{ secrets.SFDX_CLIENT_ID }}
+          username: ${{ vars.DEV_USERNAME }}
+          alias: "dev"
+
+      - name: Setup UAT Org
+        uses: rdbumstead/setup-salesforce-action@v1
+        with:
+          jwt_key: ${{ secrets.SFDX_JWT_KEY }}
+          client_id: ${{ secrets.SFDX_CLIENT_ID }}
+          username: ${{ vars.UAT_USERNAME }}
+          alias: "uat"
+
+      - name: Setup Production Org
+        uses: rdbumstead/setup-salesforce-action@v1
+        with:
+          jwt_key: ${{ secrets.SFDX_JWT_KEY }}
+          client_id: ${{ secrets.SFDX_CLIENT_ID }}
+          username: ${{ vars.PROD_USERNAME }}
+          alias: "prod"
+
+      - name: Deploy to All Environments
+        run: |
+          echo "Deploying to Development..."
+          sf project deploy start --target-org dev --test-level NoTestRun
+
+          echo "Deploying to UAT..."
+          sf project deploy start --target-org uat --test-level RunLocalTests
+
+          echo "Deploying to Production..."
+          sf project deploy start --target-org prod --test-level RunLocalTests

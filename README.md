@@ -92,11 +92,12 @@ _Required unless `skip_auth: 'true'` is set_
 
 ### Configuration
 
-| Name           | Default | Description                        |
-| -------------- | ------- | ---------------------------------- |
-| `is_dev_hub`   | `false` | Set as default Dev Hub             |
-| `node_version` | `20`    | Node.js version to use             |
-| `skip_auth`    | `false` | Skip JWT authentication (CLI only) |
+| Name           | Default     | Description                        |
+| -------------- | ----------- | ---------------------------------- |
+| `is_dev_hub`   | `false`     | Set as default Dev Hub             |
+| `node_version` | `20`        | Node.js version to use             |
+| `skip_auth`    | `false`     | Skip JWT authentication (CLI only) |
+| `alias`        | `TargetOrg` | Alias name for authenticated org   |
 
 ### Salesforce Plugins
 
@@ -402,6 +403,51 @@ jobs:
           # Your custom authentication logic here
           sf org login web
 ```
+
+</details>
+
+<details>
+<summary><b>Multi-Org Setup</b></summary>
+
+Authenticate to multiple orgs in the same workflow:
+
+    name: Multi-Org Workflow
+
+    on:
+      push:
+        branches: [main]
+
+    jobs:
+      deploy:
+        runs-on: ubuntu-latest
+        steps:
+          - uses: actions/checkout@v4
+
+          - name: Setup Development Org
+            uses: rdbumstead/setup-salesforce-action@v1
+            with:
+              jwt_key: ${{ secrets.SFDX_JWT_KEY }}
+              client_id: ${{ secrets.SFDX_CLIENT_ID }}
+              username: ${{ vars.DEV_USERNAME }}
+              alias: "dev"
+              install_delta: "true"
+
+          - name: Setup Production Org
+            uses: rdbumstead/setup-salesforce-action@v1
+            with:
+              jwt_key: ${{ secrets.SFDX_JWT_KEY }}
+              client_id: ${{ secrets.SFDX_CLIENT_ID }}
+              username: ${{ vars.PROD_USERNAME }}
+              alias: "prod"
+              install_delta: "true"
+
+          - name: Deploy to Development
+            run: |
+              sf project deploy start --target-org dev --test-level NoTestRun
+
+          - name: Deploy to Production
+            run: |
+              sf project deploy start --target-org prod --test-level RunLocalTests
 
 </details>
 

@@ -98,3 +98,25 @@ jobs:
         run: |
           sf --version
           sf plugins | grep sfdx-git-delta
+
+  test-custom-alias:
+    name: Test Custom Alias
+    runs-on: ubuntu-latest
+    if: github.repository == 'rdbumstead/setup-salesforce-action'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Test Custom Alias
+        uses: ./
+        with:
+          jwt_key: ${{ secrets.SFDX_JWT_KEY }}
+          client_id: ${{ secrets.SFDX_CLIENT_ID }}
+          username: ${{ vars.SFDX_USERNAME }}
+          alias: "CustomOrgName"
+
+      - name: Verify Custom Alias
+        run: |
+          sf org list
+          sf org display --target-org CustomOrgName

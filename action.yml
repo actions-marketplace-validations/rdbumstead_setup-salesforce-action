@@ -8,7 +8,7 @@ branding:
 
 inputs:
   # ============================================================================
-  # REQUIRED INPUTS (Authentication)
+  # AUTHENTICATION INPUTS (Required unless skip_auth is true)
   # ============================================================================
   jwt_key:
     description: "SFDX JWT Private Key"
@@ -35,6 +35,10 @@ inputs:
     description: "Skip JWT authentication (install CLI only)"
     required: false
     default: "false"
+  alias:
+    description: "Alias name for authenticated org"
+    required: false
+    default: "TargetOrg"
 
   # ============================================================================
   # SALESFORCE PLUGINS (All Optional)
@@ -173,7 +177,6 @@ runs:
       run: |
         set -e
 
-        # Secure cleanup function - runs on success or failure
         cleanup() {
           rm -f jwt.key
         }
@@ -182,14 +185,24 @@ runs:
         echo "${{ inputs.jwt_key }}" > jwt.key
         chmod 600 jwt.key
 
-        FLAGS="--client-id ${{ inputs.client_id }} --jwt-key-file jwt.key --username ${{ inputs.username }} --instance-url https://login.salesforce.com"
-
         if [ "${{ inputs.is_dev_hub }}" = "true" ]; then
           echo "Authenticating as Dev Hub..."
-          sf org login jwt $FLAGS --set-default-dev-hub --alias DevHub
+          sf org login jwt \
+            --client-id "${{ inputs.client_id }}" \
+            --jwt-key-file jwt.key \
+            --username "${{ inputs.username }}" \
+            --instance-url https://login.salesforce.com \
+            --set-default-dev-hub \
+            --alias "${{ inputs.alias }}"
         else
           echo "Authenticating to org..."
-          sf org login jwt $FLAGS --alias TargetOrg --set-default
+          sf org login jwt \
+            --client-id "${{ inputs.client_id }}" \
+            --jwt-key-file jwt.key \
+            --username "${{ inputs.username }}" \
+            --instance-url https://login.salesforce.com \
+            --set-default \
+            --alias "${{ inputs.alias }}"
         fi
 
     - name: Detect Org Type
