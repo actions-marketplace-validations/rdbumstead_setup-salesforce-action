@@ -7,7 +7,7 @@
 
 > Flexible, fast, and production-ready Salesforce CLI setup with JWT authentication and optional tooling.
 
-Created by [Ryan Bumstead](https://ryanbumstead.com) | [GitHub](https://github.com/rdbumstead) | [Consulting](mailto:ryan@ryanbumstead.com)
+Created by [Ryan Bumstead](https://github.com/rdbumstead) | [Portfolio](https://github.com/rdbumstead/salesforce-platform-architect-portfolio) | [Contact](mailto:ryan@ryanbumstead.com)
 
 ---
 
@@ -473,8 +473,8 @@ Authenticate to multiple orgs in the same workflow:
 
 ## 🤝 Related Projects
 
-- **[Salesforce Pipeline Templates](https://github.com/rdbumstead/sfdx-pipeline-templates)** - Complete CI/CD workflows
-- **[Portfolio](https://ryanbumstead.com)** - Salesforce architecture portfolio
+- **[Salesforce Platform Portfolio](https://github.com/rdbumstead/salesforce-platform-architect-portfolio)** - Enterprise Salesforce architecture examples and governance patterns
+- **Salesforce CI/CD Platform** _(Coming Soon)_ - Complete pipeline templates and reusable workflows
 
 ---
 
@@ -569,12 +569,12 @@ MIT © [Ryan Bumstead](https://ryanbumstead.com)
 
 - 🐞 [Report Bug](https://github.com/rdbumstead/setup-salesforce-action/issues)
 - 💡 [Request Feature](https://github.com/rdbumstead/setup-salesforce-action/issues)
-- 📧 [Consulting](mailto:ryan@ryanbumstead.com)
+- 📧 [Contact](mailto:ryan@ryanbumstead.com)
 - 💼 [LinkedIn](https://linkedin.com/in/ryanbumstead)
-- 🌐 [Portfolio](https://ryanbumstead.com)
+- 🌐 [GitHub Profile](https://github.com/rdbumstead)
 
 ---
 
-**Built with ❤️ for the Salesforce Community**
+**Built with ❤️ for the Salesforce Community by [Ryan Bumstead](https://github.com/rdbumstead)**
 
-⭐ Star this repo if it helped you!
+⭐ Star this repo if it helped you! | 🔗 [More Projects](https://github.com/rdbumstead?tab=repositories)
