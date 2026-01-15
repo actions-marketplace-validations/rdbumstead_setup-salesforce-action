@@ -1,18 +1,15 @@
 name: "Cross-Platform Tests"
 
 on:
-  # Run on pull requests that modify the action
   pull_request:
     paths:
       - "action.yml"
-      - ".github/workflows/test-cross-platform.yml"
+      - ".github/workflows/**"
+      - "package.json"
 
-  # Run before releases
   push:
     tags:
       - "v*"
-
-  # Allow manual triggering for validation
   workflow_dispatch:
     inputs:
       run_auth_tests:
