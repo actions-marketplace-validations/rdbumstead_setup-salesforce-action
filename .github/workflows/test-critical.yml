@@ -22,6 +22,28 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  health-check:
+    name: CLI Health Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Salesforce CLI
+        uses: ./
+        with:
+          skip_auth: "true"
+
+      - name: Comprehensive CLI Health Check
+        shell: bash
+        run: |
+          echo "🔍 Verifying CLI functionality..."
+          sf --version || exit 1
+          sf plugins --core || exit 1
+          sf --help >/dev/null 2>&1 || exit 1
+          sf config list >/dev/null 2>&1 || exit 1
+          echo "✅ All checks passed"
+
   cli-only:
     name: CLI Installation Only
     runs-on: ubuntu-latest
@@ -228,6 +250,7 @@ jobs:
     name: Critical Tests Summary
     runs-on: ubuntu-latest
     needs:
+      - health-check
       - cli-only
       - error-handling
       - cache-behavior
@@ -246,6 +269,13 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
           FAILED=false
+
+          if [ "${{ needs.health-check.result }}" = "success" ]; then
+            echo "✅ **Health Check**: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Health Check**: Failed" >> $GITHUB_STEP_SUMMARY
+            FAILED=true
+          fi
 
           if [ "${{ needs.cli-only.result }}" = "success" ]; then
             echo "✅ **CLI Installation Only**: Passed" >> $GITHUB_STEP_SUMMARY

@@ -277,8 +277,10 @@ runs:
           fi
 
           if [ -z "$ACTUAL_VERSION" ]; then
-            echo "⚠️  Could not resolve version from npm (timeout or error). Defaulting cache key to 'latest'."
-            ACTUAL_VERSION="latest"
+            # Use monthly rotation for cache when npm is unreachable
+            ACTUAL_VERSION="latest-$(date +%Y-%m)"
+            echo "⚠️ Could not resolve version from npm. Using time-based cache: $ACTUAL_VERSION"
+            echo "💡 Cache will rotate monthly to ensure freshness"
           fi
 
           echo "  Detected CLI version: $ACTUAL_VERSION"
@@ -394,6 +396,13 @@ runs:
         echo "📊 Installed: $CLI_VERSION"
         echo "cli_version=$CLI_VERSION" >> $GITHUB_OUTPUT
 
+        # Inline Health Check
+        if ! sf plugins --core >/dev/null 2>&1; then
+          echo "❌ CLI installed but not responding correctly"
+          exit 1
+        fi
+        echo "✅ CLI verified and functional"
+
     # --------------------------------------------------------------------------
     # SOURCE DIRECTORY RESOLUTION
     # --------------------------------------------------------------------------
@@ -430,6 +439,11 @@ runs:
 
         if [ "$HAS_VALID_DIR" = "false" ]; then
           echo "❌ Error: No valid source directories found."
+          echo ""
+          echo "💡 Tips:"
+          echo "   • Default 'force-app' is auto-created if missing"
+          echo "   • Custom directories must exist in your repository"
+          echo "   • Check your source_dirs input for typos"
           exit 1
         fi
 
