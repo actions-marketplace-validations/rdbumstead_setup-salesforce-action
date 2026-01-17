@@ -118,7 +118,7 @@ Full documentation lives in `/docs`:
 - [x] Custom plugin installation
 - [x] Multi-directory source handling
 - [x] External Client App support (Winter '25+ orgs)
-- [ ] Enhanced CLI version resolution & reporting
+- [x] Enhanced CLI version resolution & reporting (v2.1+)
 - [ ] Org limits & usage outputs
 - [ ] SARIF output support
 - [ ] Reusable CI/CD workflow templates
