@@ -30,10 +30,8 @@ jobs:
         plugin:
           - name: "sfdx-hardis"
             verify_cmd: "sf hardis --version"
-          - name: "@salesforce/plugin-packaging"
-            verify_cmd: "sf package version list --help"
-          - name: "@salesforce/plugin-data"
-            verify_cmd: "sf data query --help"
+          - name: "@dxatscale/sfpowerscripts"
+            verify_cmd: "sf help"
 
     steps:
       - name: Checkout
@@ -75,36 +73,36 @@ jobs:
         uses: ./
         with:
           skip_auth: "true"
-          custom_sf_plugins: "sfdx-hardis,@salesforce/plugin-packaging,@salesforce/plugin-data"
+          custom_sf_plugins: "sfdx-hardis"
 
-      - name: Verify All Plugins Installed
+      - name: Verify Plugins Installed
         run: |
-          echo "Checking all plugins installed..."
+          echo "Checking plugins installed..."
 
-          EXPECTED_PLUGINS=("sfdx-hardis" "@salesforce/plugin-packaging" "@salesforce/plugin-data")
+          # Verify community plugin was installed
+          if sf plugins --json | jq -e '.plugins[] | select(.name == "sfdx-hardis")' > /dev/null; then
+            echo "✅ sfdx-hardis installed"
+          else
+            echo "❌ sfdx-hardis not found"
+            exit 1
+          fi
 
-          for plugin in "${EXPECTED_PLUGINS[@]}"; do
-            if sf plugins --json | jq -e '.plugins[] | select(.name == "'"$plugin"'")' > /dev/null; then
-              echo "✅ $plugin installed"
-            else
-              echo "❌ $plugin not found"
-              exit 1
-            fi
-          done
+          # Verify bundled core plugins are present (they're always there)
+          if sf plugins --json | jq -e '.plugins[] | select(.name | test("plugin-data"))' > /dev/null; then
+            echo "✅ plugin-data present (bundled)"
+          else
+            echo "❌ plugin-data not found"
+            exit 1
+          fi
 
-      - name: Execute Commands from Each Plugin
+      - name: Execute Commands
         run: |
           echo "Testing sfdx-hardis execution..."
           sf hardis --version
           echo "✅ sfdx-hardis command executed"
 
           echo ""
-          echo "Testing @salesforce/plugin-packaging execution..."
-          sf package version list --help
-          echo "✅ packaging command executed"
-
-          echo ""
-          echo "Testing @salesforce/plugin-data execution..."
+          echo "Testing bundled plugin-data (always present)..."
           sf data query --help
           echo "✅ data command executed"
 

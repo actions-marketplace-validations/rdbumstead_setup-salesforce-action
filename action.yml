@@ -604,41 +604,10 @@ runs:
         echo "  Instance URL: ${{ inputs.instance_url }}"
         echo "  Alias: ${{ inputs.alias }}"
 
-        # Create a secure auth file with the access token
-        echo "$ACCESS_TOKEN" > access_token.txt
-
-        # Set secure permissions
-        if [[ "${{ runner.os }}" != "Windows" ]]; then
-          chmod 600 access_token.txt
-        fi
-
-        # Cleanup function
-        cleanup() {
-          echo "  🧹 Cleaning up access token file..."
-          rm -f access_token.txt authurl_token.txt
-        }
-        trap cleanup EXIT
-
-        # SF CLI doesn't have a direct access token command, so we create an SFDX auth URL
-        # Strip protocol, trailing slash, and path to ensure clean instance URL
-        INSTANCE_URL_CLEAN=$(echo "${{ inputs.instance_url }}" | sed -e 's|^https\?://||' -e 's|/\+$||' -e 's|/.*||')
-
-        # Note: client_id is optional for access token auth, use a placeholder if not provided
-        CLIENT_ID_VALUE="${{ inputs.client_id }}"
-        if [ -z "$CLIENT_ID_VALUE" ]; then
-          CLIENT_ID_VALUE="PlatformCLI"
-        fi
-
-        AUTH_URL="force://$CLIENT_ID_VALUE::$ACCESS_TOKEN@$INSTANCE_URL_CLEAN"
-
-        echo "$AUTH_URL" > authurl_token.txt
-        if [[ "${{ runner.os }}" != "Windows" ]]; then
-          chmod 600 authurl_token.txt
-        fi
-
-        sf org login sfdx-url \
-          --sfdx-url-file authurl_token.txt \
-          --alias ${{ inputs.alias }}
+        echo "$ACCESS_TOKEN" | sf org login access-token \
+          --instance-url "${{ inputs.instance_url }}" \
+          --alias ${{ inputs.alias }} \
+          --no-prompt
 
         # Add dev hub or default flag
         if [ "${{ inputs.is_dev_hub }}" = "true" ]; then
