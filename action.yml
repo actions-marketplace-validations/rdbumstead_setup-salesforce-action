@@ -594,7 +594,7 @@ runs:
       if: inputs.skip_auth != 'true' && inputs.auth_method == 'access-token'
       shell: bash
       env:
-        ACCESS_TOKEN: ${{ inputs.access_token }}
+        SF_ACCESS_TOKEN: ${{ inputs.access_token }}
       run: |
         set -e
 
@@ -604,7 +604,9 @@ runs:
         echo "  Instance URL: ${{ inputs.instance_url }}"
         echo "  Alias: ${{ inputs.alias }}"
 
-        echo "$ACCESS_TOKEN" | sf org login access-token \
+        # Use SF_ACCESS_TOKEN environment variable (per Salesforce CLI documentation)
+        # The --no-prompt flag reads from SF_ACCESS_TOKEN env var
+        sf org login access-token \
           --instance-url "${{ inputs.instance_url }}" \
           --alias ${{ inputs.alias }} \
           --no-prompt

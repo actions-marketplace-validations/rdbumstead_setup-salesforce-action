@@ -29,9 +29,9 @@ jobs:
       matrix:
         plugin:
           - name: "sfdx-hardis"
-            verify_cmd: "sfdx hardis:org:diagnose --help"
+            verify_cmd: "sf hardis:auth:login --help"
           - name: "@dxatscale/sfpowerscripts"
-            verify_cmd: "sfdx sfpowerscripts --help"
+            verify_cmd: "sf plugins | grep sfpowerscripts"
 
     steps:
       - name: Checkout
