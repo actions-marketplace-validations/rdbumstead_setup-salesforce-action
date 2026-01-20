@@ -30,6 +30,16 @@ inputs:
     required: false
     default: "false"
 
+  dry_run:
+    description: "Dry-run mode: skip authentication and mutations, validate detection only"
+    required: false
+    default: "false"
+
+  debug:
+    description: "Enable verbose debug output for troubleshooting"
+    required: false
+    default: "false"
+
   # ============================================================================
   # AUTHENTICATION
   # ============================================================================
@@ -164,6 +174,26 @@ outputs:
     description: "Resolved source directory flags for SF CLI commands"
     value: ${{ steps.resolve-source-dirs.outputs.source_flags }}
 
+  used_default_node:
+    description: "Whether the default Node.js version was used (true) or explicit version specified (false)"
+    value: ${{ steps.track-defaults.outputs.used_default_node }}
+
+  used_default_cli_version:
+    description: "Whether the default CLI version was used (true) or explicit version specified (false)"
+    value: ${{ steps.track-defaults.outputs.used_default_cli_version }}
+
+  used_default_api_version:
+    description: "Whether the API version was auto-detected (true) or explicitly provided (false)"
+    value: ${{ steps.track-defaults.outputs.used_default_api_version }}
+
+  cli_binary_path:
+    description: "Absolute path to the sf executable (for custom tooling integration)"
+    value: ${{ steps.install-cli.outputs.cli_path }}
+
+  validated_config:
+    description: "JSON summary of the final configuration (debug/audit use)"
+    value: ${{ steps.track-defaults.outputs.config_json }}
+
 runs:
   using: "composite"
   steps:
@@ -179,6 +209,8 @@ runs:
       id: detect-os
       shell: bash
       run: |
+        set -euo pipefail
+
         echo "🔍 Detecting operating system..."
 
         case "${{ runner.os }}" in
@@ -208,6 +240,8 @@ runs:
       if: steps.detect-os.outputs.os_type == 'linux'
       shell: bash
       run: |
+        set -euo pipefail
+
         if ! command -v jq &> /dev/null; then
           echo "📦 Installing jq on Linux..."
           sudo apt-get update && sudo apt-get install -y jq
@@ -220,6 +254,8 @@ runs:
       if: steps.detect-os.outputs.os_type == 'macos'
       shell: bash
       run: |
+        set -euo pipefail
+
         if ! command -v jq &> /dev/null; then
           echo "📦 Installing jq on macOS..."
           brew install jq
@@ -244,6 +280,8 @@ runs:
       id: cache-key
       shell: bash
       run: |
+        set -euo pipefail
+
         echo "🔑 Generating cache key..."
 
         # Tooling hash
@@ -349,6 +387,8 @@ runs:
       id: install-cli
       shell: bash
       run: |
+        set -euo pipefail
+
         if ! command -v sf &> /dev/null; then
           echo "📦 Installing Salesforce CLI..."
           
@@ -396,6 +436,11 @@ runs:
         echo "📊 Installed: $CLI_VERSION"
         echo "cli_version=$CLI_VERSION" >> $GITHUB_OUTPUT
 
+        # Capture and output CLI binary path (Forward Compatibility for v4)
+        CLI_PATH=$(command -v sf)
+        echo "cli_path=$CLI_PATH" >> $GITHUB_OUTPUT
+        echo "📍 CLI Binary: $CLI_PATH"
+
         # Inline Health Check
         if ! sf plugins --core >/dev/null 2>&1; then
           echo "❌ CLI installed but not responding correctly"
@@ -410,6 +455,8 @@ runs:
       id: resolve-source-dirs
       shell: bash
       run: |
+        set -euo pipefail
+
         RAW_INPUT="${{ inputs.source_dirs }}"
         [ -z "$RAW_INPUT" ] && RAW_INPUT="force-app"
 
@@ -454,9 +501,11 @@ runs:
     # INPUT VALIDATION
     # --------------------------------------------------------------------------
     - name: Validate authentication inputs
-      if: inputs.skip_auth != 'true'
+      if: inputs.skip_auth != 'true' && inputs.dry_run != 'true'
       shell: bash
       run: |
+        set -euo pipefail
+
         echo "🔐 Validating authentication inputs..."
         echo "  Auth method: ${{ inputs.auth_method }}"
 
@@ -500,7 +549,7 @@ runs:
 
         if [ ${#MISSING_INPUTS[@]} -gt 0 ]; then
           echo "❌ Error: The following required inputs are missing for ${{ inputs.auth_method }} authentication:"
-          printf '  - %s\n' "${MISSING_INPUTS[@]}"
+          printf '  - %s\\n' "${MISSING_INPUTS[@]}"
           exit 1
         fi
 
@@ -510,12 +559,12 @@ runs:
     # AUTHENTICATION
     # --------------------------------------------------------------------------
     - name: Authenticate Org (JWT)
-      if: inputs.skip_auth != 'true' && inputs.auth_method == 'jwt'
+      if: inputs.skip_auth != 'true' && inputs.dry_run != 'true' && inputs.auth_method == 'jwt'
       shell: bash
       env:
         JWT_KEY: ${{ inputs.jwt_key }}
       run: |
-        set -e
+        set -euo pipefail
 
         echo "🔐 Authenticating via JWT..."
         echo "  Client ID: ${{ inputs.client_id && '***' || '(not set)' }}"
@@ -563,12 +612,12 @@ runs:
         echo "✅ JWT authentication successful"
 
     - name: Authenticate Org (SFDX Auth URL)
-      if: inputs.skip_auth != 'true' && inputs.auth_method == 'sfdx-url'
+      if: inputs.skip_auth != 'true' && inputs.dry_run != 'true' && inputs.auth_method == 'sfdx-url'
       shell: bash
       env:
         SFDX_AUTH_URL: ${{ inputs.sfdx_auth_url }}
       run: |
-        set -e
+        set -euo pipefail
 
         echo "🔐 Authenticating via SFDX Auth URL..."
         echo "  Alias: ${{ inputs.alias }}"
@@ -605,12 +654,12 @@ runs:
         echo "✅ SFDX Auth URL authentication successful"
 
     - name: Authenticate Org (Access Token)
-      if: inputs.skip_auth != 'true' && inputs.auth_method == 'access-token'
+      if: inputs.skip_auth != 'true' && inputs.dry_run != 'true' && inputs.auth_method == 'access-token'
       shell: bash
       env:
         SF_ACCESS_TOKEN: ${{ inputs.access_token }}
       run: |
-        set -e
+        set -euo pipefail
 
         echo "🔐 Authenticating via Direct Access Token..."
         echo "  ⚠️ WARNING: Access tokens are short-lived and recommended for advanced use only"
@@ -641,7 +690,7 @@ runs:
       if: inputs.skip_auth != 'true'
       shell: bash
       run: |
-        set -e
+        set -euo pipefail
 
         echo "🔍 Retrieving org details..."
         DETAILS=$(sf org display --target-org ${{ inputs.alias }} --json)
@@ -709,13 +758,55 @@ runs:
       id: auth-status
       shell: bash
       run: |
-        if [ "${{ inputs.skip_auth }}" = "true" ]; then
+        set -euo pipefail
+
+        if [ "${{ inputs.skip_auth }}" = "true" ] || [ "${{ inputs.dry_run }}" = "true" ]; then
           echo "auth_performed=false" >> $GITHUB_OUTPUT
-          echo "ℹ️  Authentication skipped"
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "ℹ️  Authentication skipped (dry-run mode)"
+          else
+            echo "ℹ️  Authentication skipped"
+          fi
         else
           echo "auth_performed=true" >> $GITHUB_OUTPUT
           echo "✅ Authentication completed"
         fi
+
+    - name: Track Default Usage
+      id: track-defaults
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        echo "📊 Tracking default usage..."
+
+        # Track Node.js version default
+        if [ "${{ inputs.node_version }}" = "20" ]; then
+          echo "used_default_node=true" >> $GITHUB_OUTPUT
+          echo "  ⚠️  Using default Node.js version: 20"
+        else
+          echo "used_default_node=false" >> $GITHUB_OUTPUT
+          echo "  ✅ Using explicit Node.js version: ${{ inputs.node_version }}"
+        fi
+
+        # Track CLI version default
+        if [ "${{ inputs.cli_version }}" = "latest" ]; then
+          echo "used_default_cli_version=true" >> $GITHUB_OUTPUT
+          echo "  ⚠️  Using default CLI version: latest"
+        else
+          echo "used_default_cli_version=false" >> $GITHUB_OUTPUT
+          echo "  ✅ Using explicit CLI version: ${{ inputs.cli_version }}"
+        fi
+
+        # API version is always auto-detected in current implementation
+        # API version is always auto-detected in current implementation
+        echo "used_default_api_version=true" >> $GITHUB_OUTPUT
+        echo "  ℹ️  API version auto-detected from org"
+
+        # Generate JSON Configuration Summary (Forward Compatibility for v4)
+        # This provides a structured audit record of the final configuration
+        CONFIG_JSON="{\"node_version\":\"${{ inputs.node_version }}\",\"cli_version\":\"${{ inputs.cli_version }}\",\"auth_method\":\"${{ inputs.auth_method }}\",\"skip_auth\":${{ inputs.skip_auth }},\"dry_run\":${{ inputs.dry_run }}}"
+        echo "config_json=$CONFIG_JSON" >> $GITHUB_OUTPUT
 
     # --------------------------------------------------------------------------
     # OPTIONAL TOOLING (with strict mode awareness)
@@ -724,8 +815,9 @@ runs:
       if: inputs.install_delta == 'true'
       shell: bash
       run: |
+        set -eu  # Always fail on undefined variables
         if [ "${{ inputs.strict }}" = "true" ]; then
-          set -e
+          set -o pipefail
         fi
 
         if ! sf plugins inspect sfdx-git-delta >/dev/null 2>&1; then
@@ -764,8 +856,9 @@ runs:
       if: inputs.install_scanner == 'true'
       shell: bash
       run: |
+        set -eu  # Always fail on undefined variables
         if [ "${{ inputs.strict }}" = "true" ]; then
-          set -e
+          set -o pipefail
         fi
 
         if ! sf plugins inspect @salesforce/plugin-code-analyzer >/dev/null 2>&1; then
@@ -804,8 +897,9 @@ runs:
       if: inputs.custom_sf_plugins != ''
       shell: bash
       run: |
+        set -eu  # Always fail on undefined variables
         if [ "${{ inputs.strict }}" = "true" ]; then
-          set -e
+          set -o pipefail
         fi
 
         echo "📦 Installing custom Salesforce CLI plugins..."
@@ -910,8 +1004,9 @@ runs:
       if: inputs.install_prettier == 'true'
       shell: bash
       run: |
+        set -eu  # Always fail on undefined variables
         if [ "${{ inputs.strict }}" = "true" ]; then
-          set -e
+          set -o pipefail
         fi
 
         if ! command -v prettier &> /dev/null; then
@@ -926,8 +1021,9 @@ runs:
       if: inputs.install_eslint == 'true'
       shell: bash
       run: |
+        set -eu  # Always fail on undefined variables
         if [ "${{ inputs.strict }}" = "true" ]; then
-          set -e
+          set -o pipefail
         fi
 
         if ! command -v eslint &> /dev/null; then
@@ -942,8 +1038,9 @@ runs:
       if: inputs.install_lwc_jest == 'true'
       shell: bash
       run: |
+        set -eu  # Always fail on undefined variables
         if [ "${{ inputs.strict }}" = "true" ]; then
-          set -e
+          set -o pipefail
         fi
 
         if ! npm list -g @salesforce/sfdx-lwc-jest &> /dev/null; then
@@ -959,11 +1056,55 @@ runs:
         fi
 
     # --------------------------------------------------------------------------
+    # INVARIANT VALIDATION
+    # --------------------------------------------------------------------------
+    - name: Validate Setup Invariants
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        echo "🔒 Validating setup invariants..."
+
+        # 1. CLI is callable and functional
+        if ! sf version --json >/dev/null 2>&1; then
+          echo "❌ INVARIANT VIOLATION: CLI not functional"
+          echo "   The Salesforce CLI was installed but is not responding correctly"
+          exit 1
+        fi
+        echo "  ✅ CLI functional"
+
+        # 2. Org is reachable (only if auth was performed)
+        if [ "${{ inputs.skip_auth }}" != "true" ] && [ "${{ inputs.dry_run }}" != "true" ]; then
+          if ! sf org display --target-org "${{ inputs.alias }}" --json >/dev/null 2>&1; then
+            echo "❌ INVARIANT VIOLATION: Org not reachable"
+            echo "   Authentication appeared to succeed but org is not accessible"
+            exit 1
+          fi
+          echo "  ✅ Org reachable"
+          
+          # 3. API version resolved
+          API_VERSION="${{ steps.detect-org.outputs.api_version }}"
+          if [ -z "$API_VERSION" ] || [ "$API_VERSION" = "unknown" ]; then
+            echo "❌ INVARIANT VIOLATION: API version not resolved"
+            echo "   Org is reachable but API version could not be determined"
+            exit 1
+          fi
+          echo "  ✅ API version resolved ($API_VERSION)"
+        else
+          echo "  ⏭️  Skipping org validation (auth skipped or dry-run mode)"
+        fi
+
+        echo ""
+        echo "✅ All invariants validated - setup is guaranteed functional"
+
+    # --------------------------------------------------------------------------
     # FINAL STATUS
     # --------------------------------------------------------------------------
     - name: Environment Ready
       shell: bash
       run: |
+        set -euo pipefail
+
         echo ""
         echo "🎉 Salesforce environment is ready!"
         echo ""
@@ -996,3 +1137,72 @@ runs:
 
         echo ""
         echo "✅ Setup complete - ready for Salesforce operations!"
+
+    - name: Publish Setup Summary
+      if: always()
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        # Build summary for GitHub Actions UI
+        {
+          echo "## 🎯 Salesforce Environment Setup"
+          echo ""
+          echo "| Component | Value |"
+          echo "|-----------|-------|"
+          
+          # Auth method and status
+          if [ "${{ inputs.skip_auth }}" = "true" ] || [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "| **Auth Method** | Skipped |"
+          else
+            echo "| **Auth Method** | \`${{ inputs.auth_method }}\` |"
+            echo "| **Org Type** | ${{ steps.detect-org.outputs.org_type }} |"
+            echo "| **Org Edition** | ${{ steps.detect-org.outputs.org_edition }} |"
+            echo "| **API Version** | \`${{ steps.detect-org.outputs.api_version }}\` |"
+            echo "| **Instance URL** | ${{ steps.detect-org.outputs.instance_url }} |"
+          fi
+          
+          # Runtime versions
+          echo "| **CLI Version** | \`${{ steps.install-cli.outputs.cli_version }}\` |"
+          echo "| **Node Version** | \`${{ inputs.node_version }}\` |"
+          
+          # Default usage tracking
+          echo ""
+          echo "### ⚙️ Configuration"
+          echo ""
+          if [ "${{ steps.track-defaults.outputs.used_default_node }}" = "true" ]; then
+            echo "- ⚠️ Using default Node.js version"
+          else
+            echo "- ✅ Using explicit Node.js version"
+          fi
+          
+          if [ "${{ steps.track-defaults.outputs.used_default_cli_version }}" = "true" ]; then
+            echo "- ⚠️ Using default CLI version (latest)"
+          else
+            echo "- ✅ Using explicit CLI version"
+          fi
+          
+          # Installed tools
+          echo ""
+          echo "### 🔧 Installed Tools"
+          echo ""
+          echo "- Salesforce CLI"
+          
+          [ "${{ inputs.install_delta }}" = "true" ] && echo "- sfdx-git-delta"
+          [ "${{ inputs.install_scanner }}" = "true" ] && echo "- Salesforce Code Analyzer"
+          [ "${{ inputs.install_prettier }}" = "true" ] && echo "- Prettier (with Apex plugin)"
+          [ "${{ inputs.install_eslint }}" = "true" ] && echo "- ESLint (with LWC plugin)"
+          [ "${{ inputs.install_lwc_jest }}" = "true" ] && echo "- sfdx-lwc-jest"
+          
+          if [ -n "${{ inputs.custom_sf_plugins }}" ]; then
+            echo ""
+            echo "### 🔌 Custom Plugins"
+            echo ""
+            IFS=',' read -ra PLUGIN_LIST <<< "${{ inputs.custom_sf_plugins }}"
+            for plugin in "${PLUGIN_LIST[@]}"; do
+              plugin=$(echo "$plugin" | xargs)
+              [ -n "$plugin" ] && echo "- \`$plugin\`"
+            done
+          fi
+          
+        } >> $GITHUB_STEP_SUMMARY

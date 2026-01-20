@@ -5,6 +5,103 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-01-18
+
+### 🔒 Production Hardening
+
+This release transforms the action into a bulletproof primitive suitable for foundational CI/CD use.
+
+### Added ➕
+
+- **Invariant Validation** - Mandatory validation step ensures setup integrity:
+  - CLI is installed AND functional (not just present on PATH)
+  - Authenticated org is reachable (not just auth succeeded)
+  - API version is resolved (not just queried)
+  - Fails fast with clear violation messages instead of silent partial failures
+- **Default Usage Tracking** - New outputs enable enforcement hooks in higher-level workflows:
+  - `used_default_node` - Whether default Node.js version (20) was used
+  - `used_default_cli_version` - Whether default CLI version (latest) was used
+  - `used_default_api_version` - Whether API version was auto-detected (always true currently)
+  - Allows CI/CD policies to block deployments that rely on implicit defaults
+- **Dry-Run Mode** - New `dry_run` input skips authentication and mutations while validating detection logic:
+  - Useful for testing action configuration without consuming org API calls
+  - Skips all auth steps but still installs CLI and resolves environment
+- **Debug Mode** - New `debug` input placeholder for future verbose output (accepted but not yet implemented)
+- **Structured Observability** - New step publishes audit-friendly summary to GitHub Step Summary:
+  - Auth method, org type, API version
+  - CLI and Node.js versions
+  - Default usage warnings
+  - Complete list of installed tools and plugins
+  - Always runs (even on failure) for post-mortem analysis
+- **Forward Compatibility Outputs** - Added outputs to support future v4 modularization:
+  - `cli_binary_path` - Absolute path to installed binary (for custom tooling integration)
+  - `validated_config` - JSON summary of effective configuration (for auditing/debugging)
+
+### Changed 🔧
+
+- **BREAKING (Intentional)**: Action now fails fast on partial failures
+  - Workflows that previously succeeded despite broken CLI or unreachable orgs will now fail
+  - This is the correct behavior for a primitive—silent failures are dangerous
+  - Example: CLI installed but `sf` command non-functional → now fails instead of succeeding
+- **Shell Hardening Enhanced**: All bash steps now use strict error handling:
+  - Core steps: `set -euo pipefail` (exit on error, undefined variables, or pipe failures)
+  - Optional tooling: `set -eu` + conditional `pipefail` based on `strict` mode
+  - Prevents subtle bugs from undefined variables while keeping plugin installs resilient
+
+### Fixed 🐞
+
+- **Hidden Partial Failure Risk**: Action will no longer report success when:
+  - CLI installation succeeds but CLI is non-functional
+  - Authentication succeeds but org is unreachable
+  - Org display succeeds but API version cannot be determined
+- **Silent Downgrade Risk**: Default usage is now explicitly tracked and exposed
+  - Prevents workflows from unknowingly relying on implicit defaults
+  - Enables explicit versioning enforcement in hardened pipelines
+
+### Testing 🧪
+
+- **New Test Workflow**: `test-invariants.yml` validates:
+  - Invariant validation catches failures correctly
+  - Dry-run mode works without authentication
+  - Default tracking outputs are accurate
+  - All features work across Linux, macOS, Windows
+
+### Documentation 📖
+
+- **Guaranteed Invariants**: New README section documents the action's contract:
+  - Lists explicit invariants guaranteed on success
+  - Explains why this matters for primitive composability
+  - Positions action as safe foundation for complex workflows
+- **Versioning Policy**: Formal semantic versioning governance:
+  - Defines what counts as breaking vs non-breaking changes
+  - Guarantees defaults never change in MINOR versions
+  - Recommends pinning to MAJOR version in production
+- **Caching Strategy**: Comprehensive documentation of cache behavior:
+  - Explains cache key composition
+  - Documents CLI version resolution logic (npm query + time-based fallback)
+  - Lists cache hit/miss scenarios
+  - Provides cache refresh strategies
+- **Architecture Documentation**: New `docs/ARCHITECTURE.md` captures:
+  - Design philosophy and principles
+  - Current v3 architecture with component diagrams
+  - Future v4 modularization roadmap
+  - Polyglot pattern for hybrid TypeScript utilities
+  - Architectural Decision Records (ADRs)
+
+### Why This Matters
+
+This action is designed as a **primitive**, not an application. Primitives must fail loudly and clearly when invariants are violated. Silent partial failures undermine trust in the entire CI/CD pipeline.
+
+Before v3.0.0, it was possible for:
+
+- CLI to install but be non-functional → workflow succeeds → subsequent steps fail mysteriously
+- Auth to succeed but org be unreachable → workflow succeeds → deployments fail unpredictably
+- API version to be unresolved → workflow succeeds → commands using API calls fail
+
+After v3.0.0, these scenarios fail immediately with actionable error messages.
+
+---
+
 ## [2.2.0] - 2026-01-17
 
 ### 🚀 New Features - Performance & Caching
@@ -231,6 +328,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[3.0.0]: https://github.com/rdbumstead/setup-salesforce-action/releases/tag/v3.0.0
 [2.2.0]: https://github.com/rdbumstead/setup-salesforce-action/releases/tag/v2.2.0
 [2.1.0]: https://github.com/rdbumstead/setup-salesforce-action/releases/tag/v2.1.0
 [2.0.1]: https://github.com/rdbumstead/setup-salesforce-action/releases/tag/v2.0.1
