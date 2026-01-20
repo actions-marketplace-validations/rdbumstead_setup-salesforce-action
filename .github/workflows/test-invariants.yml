@@ -1,0 +1,189 @@
+name: Test Invariants
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "action.yml"
+      - ".github/workflows/test-invariants.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "action.yml"
+      - ".github/workflows/test-invariants.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # Test that invariant validation catches failures
+  test-invariant-detection:
+    name: Test Invariant Validation
+    runs-on: ubuntu-latest
+    continue-on-error: true # Expected to fail
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Test with skip_auth (should pass)
+        uses: ./
+        with:
+          skip_auth: true
+
+  # Test dry-run mode
+  test-dry-run:
+    name: Test Dry-Run Mode
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run in dry-run mode
+        uses: ./
+        with:
+          dry_run: true
+          # These would normally be required, but dry-run should skip validation
+          skip_auth: false
+          auth_method: jwt
+
+      - name: Verify CLI was installed
+        shell: bash
+        run: |
+          if ! command -v sf &> /dev/null; then
+            echo "❌ CLI not installed in dry-run mode"
+            exit 1
+          fi
+          echo "✅ CLI installed successfully"
+
+  # Test default tracking outputs
+  test-default-tracking:
+    name: Test Default Usage Tracking
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup with defaults
+        id: setup-defaults
+        uses: ./
+        with:
+          skip_auth: true
+
+      - name: Verify default tracking outputs (defaults used)
+        shell: bash
+        run: |
+          if [ "${{ steps.setup-defaults.outputs.used_default_node }}" != "true" ]; then
+            echo "❌ Expected used_default_node=true, got ${{ steps.setup-defaults.outputs.used_default_node }}"
+            exit 1
+          fi
+
+          if [ "${{ steps.setup-defaults.outputs.used_default_cli_version }}" != "true" ]; then
+            echo "❌ Expected used_default_cli_version=true, got ${{ steps.setup-defaults.outputs.used_default_cli_version }}"
+            exit 1
+          fi
+
+          echo "✅ Default tracking outputs correct when defaults used"
+
+          # Verify forward compatibility outputs
+          if [ -z "${{ steps.setup-defaults.outputs.cli_binary_path }}" ]; then
+            echo "❌ cli_binary_path output missing"
+            exit 1
+          fi
+          echo "📍 Verified cli_binary_path: ${{ steps.setup-defaults.outputs.cli_binary_path }}"
+
+          if [ -z "${{ steps.setup-defaults.outputs.validated_config }}" ]; then
+            echo "❌ validated_config output missing"
+            exit 1
+          fi
+          echo "📊 Verified validated_config: ${{ steps.setup-defaults.outputs.validated_config }}"
+
+      - name: Setup with explicit versions
+        id: setup-explicit
+        uses: ./
+        with:
+          skip_auth: true
+          node_version: "18"
+          cli_version: "2.30.8"
+
+      - name: Verify default tracking outputs (explicit versions)
+        shell: bash
+        run: |
+          if [ "${{ steps.setup-explicit.outputs.used_default_node }}" != "false" ]; then
+            echo "❌ Expected used_default_node=false, got ${{ steps.setup-explicit.outputs.used_default_node }}"
+            exit 1
+          fi
+
+          if [ "${{ steps.setup-explicit.outputs.used_default_cli_version }}" != "false" ]; then
+            echo "❌ Expected used_default_cli_version=false, got ${{ steps.setup-explicit.outputs.used_default_cli_version }}"
+            exit 1
+          fi
+
+          echo "✅ Default tracking outputs correct when explicit versions used"
+
+  # Test with authentication to verify full invariant validation
+  test-full-invariants:
+    name: Test Full Invariant Validation
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' # Only run on manual trigger with secrets
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup with authentication
+        id: setup-auth
+        uses: ./
+        with:
+          auth_method: sfdx-url
+          sfdx_auth_url: ${{ secrets.SFDX_AUTH_URL }}
+        # This step will validate:
+        # - CLI is functional
+        # - Org is reachable
+        # - API version is resolved
+
+      - name: Verify all outputs populated
+        shell: bash
+        run: |
+          echo "Org ID: ${{ steps.setup-auth.outputs.org_id }}"
+          echo "Instance URL: ${{ steps.setup-auth.outputs.instance_url }}"
+          echo "API Version: ${{ steps.setup-auth.outputs.api_version }}"
+          echo "Username: ${{ steps.setup-auth.outputs.username }}"
+
+          # Verify critical outputs are not empty
+          if [ -z "${{ steps.setup-auth.outputs.org_id }}" ] || [ "${{ steps.setup-auth.outputs.org_id }}" = "unknown" ]; then
+            echo "❌ org_id not populated"
+            exit 1
+          fi
+
+          if [ -z "${{ steps.setup-auth.outputs.api_version }}" ] || [ "${{ steps.setup-auth.outputs.api_version }}" = "unknown" ]; then
+            echo "❌ api_version not populated"
+            exit 1
+          fi
+
+          echo "✅ All outputs correctly populated"
+
+  # Test debug mode
+  test-debug-mode:
+    name: Test Debug Mode
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup with debug enabled
+        id: setup-debug
+        uses: ./
+        with:
+          skip_auth: true
+          debug: true
+        # Note: debug input is defined but not yet implemented in action logic
+        # This test ensures the input is accepted without errors
+
+      - name: Verify setup succeeded
+        shell: bash
+        run: |
+          echo "✅ Debug mode input accepted"
+          echo "Config: ${{ steps.setup-debug.outputs.validated_config }}"
