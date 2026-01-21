@@ -12,15 +12,14 @@
 4. [Error Modes](#error-modes)
 5. [Security Model](#security-model)
 6. [Performance Characteristics](#performance-characteristics)
-7. [Future Architecture (v4)](#future-architecture-v4)
-8. [The Polyglot Pattern](#the-polyglot-pattern)
-9. [Release Strategy](#release-strategy)
-10. [Testing Approach](#testing-approach)
-11. [For Contributors](#for-contributors)
-12. [Known Limitations](#known-limitations)
-13. [Frequently Asked Questions](#frequently-asked-questions)
-14. [Glossary](#glossary)
-15. [Decision Log](#decision-log)
+7. [The Polyglot Pattern](#the-polyglot-pattern)
+8. [Release Strategy](#release-strategy)
+9. [Testing Approach](#testing-approach)
+10. [For Contributors](#for-contributors)
+11. [Known Limitations](#known-limitations)
+12. [Frequently Asked Questions](#frequently-asked-questions)
+13. [Glossary](#glossary)
+14. [Decision Log](#decision-log)
 
 ---
 
@@ -282,13 +281,6 @@ These outputs are **stable interfaces**. Changes require major version bumps.
 | `used_default_cli_version` | boolean | True if default CLI version used     |
 | `used_default_api_version` | boolean | True if API version auto-detected    |
 
-#### Forward Compatibility Outputs (v4 Prep)
-
-| Output             | Type        | Description                                   |
-| ------------------ | ----------- | --------------------------------------------- |
-| `cli_binary_path`  | string      | Absolute path to `sf` executable              |
-| `validated_config` | JSON string | Structured summary of effective configuration |
-
 ### Guaranteed Invariants
 
 On successful completion, the action **guarantees**:
@@ -427,27 +419,9 @@ Track these metrics in your workflows:
 
 ---
 
-## Future Architecture (v4)
+## Status Update (Jan 2026)
 
-### v4 Triggers
-
-v4 will be released when the modular architecture:
-
-1. **Passes all existing tests** - The refactored modular structure must pass the exact same test cases as the current monolithic v3 action. The `action.yml` will serve as an orchestration wrapper that calls modular components, and existing test workflows will validate the integrated behavior
-2. **Maintains performance parity** - No regression in setup time (cache hit and cache miss scenarios)
-3. **Has a documented migration path** - Clear upgrade guide for any breaking changes
-
-### v4 Breaking Changes (Potential)
-
-The following changes **may** occur in v4:
-
-| Change                                | Rationale               | Migration Path                    |
-| ------------------------------------- | ----------------------- | --------------------------------- |
-| Removal of deprecated `sfdx_*` inputs | CLI v1 is EOL           | Use `sf` equivalents              |
-| Output format changes                 | Structured JSON outputs | Parse new format via `fromJSON()` |
-| New required inputs (with defaults)   | Enhanced configuration  | Accept defaults or provide values |
-
-**Commitment**: No silent behavior changes. Breaking changes will have clear migration documentation.
+After review, this action will remain a stable, monolithic CLI wrapper to prioritize backward compatibility and maintenance stability. The proposed modular v4 architecture has been shelved to avoid unnecessary complexity for current users.
 
 ---
 
@@ -462,8 +436,7 @@ The following changes **may** occur in v4:
 | **Full TypeScript**               | Best testing, type safety, rich ecosystem     | Higher contributor barrier, build overhead           | If action evolves into complex business logic |
 
 **Current v3 Decision**: Pure Composite
-**v4 Consideration**: Hybrid for Project Context Engine only
-**Future**: Evaluate based on complexity growth
+**Future**: Continue with current architecture
 
 ---
 
@@ -510,14 +483,16 @@ git push origin v3 --force
 
 ### Deprecation Process
 
-1. **v3.1.0**: Add deprecation warning to logs
-2. **v3.2.0** onward: Continue warning for 6 months
-3. **v4.0.0**: Remove deprecated feature, update migration guide
+> **Note**: With the v4 modular architecture now cancelled, the action will continue to evolve through incremental v3.x releases. Any deprecated features will be removed in future major versions only when necessary.
+
+1. **v3.x.0**: Add deprecation warning to logs
+2. **v3.x.0** onward: Continue warning for 6 months minimum
+3. **Future major version**: Remove deprecated feature only if necessary, update migration guide
 
 Example warning:
 
 ```
-⚠️  DEPRECATION WARNING: Input 'sfdx_version' is deprecated and will be removed in v4.0.0.
+⚠️  DEPRECATION WARNING: Input 'sfdx_version' is deprecated.
    Use 'cli_version' instead. See: https://github.com/rdbumstead/setup-salesforce-action/blob/main/docs/MIGRATION.md
 ```
 
@@ -625,18 +600,6 @@ Before major releases, validate by running all test workflows against the releas
    - Reference issue number
    - Update `CHANGELOG.md` under `[Unreleased]`
 
-### Module Authoring Guidelines (v4)
-
-When the time comes to write modules:
-
-| Guideline                 | Description                                       |
-| ------------------------- | ------------------------------------------------- |
-| **Single Responsibility** | Each module does one thing well                   |
-| **Input Validation**      | Fail fast with clear error messages               |
-| **Output Format**         | JSON for machine consumption, human-readable logs |
-| **Documentation**         | README in module directory with examples          |
-| **Testing**               | Standalone test workflow per module               |
-
 ### Code Style
 
 - **Shell**: Follow [Google Shell Style Guide](https://google.github.io/styleguide/shellguide.html)
@@ -685,11 +648,11 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`
 
 ### Action-Specific
 
-| Limitation                                 | Reason                     | Future Plan                      |
-| ------------------------------------------ | -------------------------- | -------------------------------- |
-| No multi-org authentication in single step | Architectural simplicity   | v4 may support via modules       |
-| API version always auto-detected           | Salesforce CLI behavior    | v5 may add override input        |
-| No support for proxy configuration         | Out of scope for primitive | Document user-side configuration |
+| Limitation                                 | Reason                     | Future Plan                            |
+| ------------------------------------------ | -------------------------- | -------------------------------------- |
+| No multi-org authentication in single step | Architectural simplicity   | Not planned (out of scope)             |
+| API version always auto-detected           | Salesforce CLI behavior    | May add override input in future minor |
+| No support for proxy configuration         | Out of scope for primitive | Document user-side configuration       |
 
 ---
 
@@ -1141,26 +1104,27 @@ Use `@vercel/ncc` to compile everything into a single file:
 
 ### ADR-002: Monolithic vs Modular Architecture
 
-**Status**: Decided (v3 Monolith, v4 Internal Modular)
+**Status**: Decided (v3 Monolith, v4 Cancelled)
 
-**Context**: The action has grown to ~1,200 lines.
+**Context**: The action has grown to ~1,200 lines. A modular v4 architecture was considered.
 
-**Decision**:
+**Decision** (Updated Jan 2026):
 
-- v3: Ship as monolith with forward-compatibility outputs
-- v4: Refactor to internal modules using strangler pattern
+- v3: Ship and maintain as stable monolith
+- v4 modular architecture: **Cancelled**
 
 **Rationale**:
 
-- Premature modularization is worse than size
-- Internal modularization avoids user friction
-- Forward compatibility outputs (`cli_binary_path`, `validated_config`) prepare for v4
+- The action serves as a stable primitive for Salesforce CI/CD workflows
+- Modularization would add unnecessary complexity for current users
+- Backward compatibility and maintenance stability are higher priorities
+- The monolithic structure is appropriate for a CLI orchestration wrapper
 
 **Consequences**:
 
-- v3 is larger but stable
-- v4 migration path is defined
-- Users experience zero disruption
+- v3 will continue to receive incremental improvements via minor/patch releases
+- No migration path needed - users continue with stable v3.x releases
+- Future enhancements will be additive within the monolithic structure
 
 ---
 
